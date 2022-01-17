@@ -10,8 +10,26 @@ These instructions wait for the MVP implementation.
 
 ## Development
 
-**TODO**.
-These instructions wait for the MVP implementation.
+Start by cloning this repo to your local machine.
+To get the services up and running, you will need [docker-compose](https://docs.docker.com/compose/install/) and [Hasura](https://hasura.io/docs/latest/graphql/core/index.html).
+
+Create the `.env` file so `docker-compose.yml` can read environment variables from there:
+
+```
+cp .env.example .env
+```
+
+Remember to change any configurations and credentials to suit your dev or production needs.
+*Currently, only development usage is assumed, without much safety!*
+
+Start the services and apply database migrations:
+
+```
+docker-compose up -d      # Leave out -d to see logs interactively on the console
+cd database/hasura
+hasura migrate apply
+hasura metadata apply
+```
 
 ## Contact
 
