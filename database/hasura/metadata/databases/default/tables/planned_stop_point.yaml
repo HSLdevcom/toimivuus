@@ -1,0 +1,11 @@
+table:
+  name: stop_point
+  schema: planned
+array_relationships:
+- name: stop_point_in_service_patterns
+  using:
+    foreign_key_constraint_on:
+      column: stop_id
+      table:
+        name: stop_point_in_service_pattern
+        schema: planned

@@ -1,0 +1,2 @@
+DROP SCHEMA planned CASCADE;
+DROP EXTENSION btree_gist;

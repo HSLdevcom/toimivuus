@@ -1,0 +1,3 @@
+- "!include planned_service_pattern.yaml"
+- "!include planned_stop_point.yaml"
+- "!include planned_stop_point_in_service_pattern.yaml"
