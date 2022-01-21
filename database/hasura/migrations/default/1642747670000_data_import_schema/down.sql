@@ -1,0 +1,1 @@
+DROP SCHEMA data_import CASCADE;
