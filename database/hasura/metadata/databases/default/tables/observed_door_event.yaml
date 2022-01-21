@@ -1,0 +1,3 @@
+table:
+  name: door_event
+  schema: observed

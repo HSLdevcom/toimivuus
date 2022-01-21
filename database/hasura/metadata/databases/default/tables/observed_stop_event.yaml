@@ -1,0 +1,3 @@
+table:
+  name: stop_event
+  schema: observed
