@@ -41,6 +41,20 @@ class TestAll(unittest.TestCase):
         rhf = RawHfpFile(base_name='2020-01-01T01', event_type=EventType.ARR)
         self.assertFalse(rhf.local_exists())
 
+    # TODO: Should mock non-existent remote file locally below,
+    #       to avoid trying random external URL.
+    @mock.patch.dict(
+        os.environ, 
+        {'DATA_CACHE_DIRECTORY': 'tmp',
+        'STORAGE_URL_ROOT': 'https://abc.abc'}
+        )
+    def test_rawhfpfile_not_exists_locally_error(self):
+        """Cannot download non-existing remote file."""
+        with self.assertLogs(level='WARNING') as log:
+            rhf = RawHfpFile(base_name='2021-10-10T03', event_type=EventType.DOC)
+            rhf.download()
+            self.assertEquals(len(log.output), 1)
+
     def test_rawhfpdump_creation(self):
         """Can create a simple RawHfpDump."""
         self.assertIsInstance(

@@ -58,6 +58,20 @@ class RawHfpFile:
     def local_exists(self) -> bool:
         return os.path.exists(self.local_path)
 
+    def download(self) -> None:
+        if not self.remote_exists():
+            log.warning(f'Remote file missing: cannot download {self.raw_file_name}')
+            return
+        with requests.get(self.remote_path, stream=True) as r:
+            r.raise_for_status()
+            with open(self.local_path, 'wb') as f:
+                i = 0
+                for chunk in r.iter_content(chunk_size=8192):
+                    i += 1
+                    log.debug(f'Chunk {i} ...')
+                    f.write(chunk)
+                log.info(f'{self.local_path} downloaded')
+
 class RawHfpDump:
     """Collection of raw HFP messages of multiple types received during given hour."""
     
