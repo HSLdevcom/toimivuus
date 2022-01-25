@@ -6,12 +6,12 @@ from enum import Enum, auto
 from datetime import datetime
 from typing import List
 
-def remote_file_path(fname: str):
+def remote_file_path(fname: str) -> str:
     """Append fname to STORAGE_URL_ROOT."""
     url = os.getenv('STORAGE_URL_ROOT')
     return urllib.parse.urljoin(url, fname)
 
-def cached_file_path(fname: str):
+def cached_file_path(fname: str) -> str:
     """Append fname to DATA_CACHE_DIRECTORY."""
     cache = os.getenv('DATA_CACHE_DIRECTORY')
     return os.path.join(cache, fname)
@@ -48,20 +48,20 @@ class RawHfpFile:
         self.remote_path = remote_file_path(self.raw_file_name)
         self.local_path = cached_file_path(self.raw_file_name)
     
-    def remote_exists(self):
+    def remote_exists(self) -> bool:
         try:
             r = requests.head(self.remote_path, timeout=self.REQUEST_TIMEOUT_S)
             return r.status_code == 200
         except requests.exceptions.ConnectionError:
             return False
 
-    def local_exists(self):
+    def local_exists(self) -> bool:
         return os.path.exists(self.local_path)
 
 class RawHfpDump:
     """Collection of raw HFP messages of multiple types received during given hour."""
     
-    def __init__(self, dump_datetime: datetime, event_types: [str]):
+    def __init__(self, dump_datetime: datetime, event_types: List[str]):
         self.dump_datetime = dump_datetime
         self.event_types = [EventType[evt] for evt in event_types]
         self.base_name = f'{dump_datetime.year}-{dump_datetime.month:02d}-{dump_datetime.day:02d}T{dump_datetime.hour:02d}'
