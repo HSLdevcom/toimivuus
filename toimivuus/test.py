@@ -1,5 +1,8 @@
+import os
 import unittest
+from unittest import mock
 from toimivuus import EventType
+from toimivuus import RawHfpFile
 from toimivuus import RawHfpDump
 from datetime import datetime
 
@@ -31,6 +34,12 @@ class TestAll(unittest.TestCase):
         throws an error."""
         with self.assertRaises(KeyError):
             EventType['FOO']
+
+    @mock.patch.dict(os.environ, {'DATA_CACHE_DIRECTORY': 'tmp'})
+    def test_rawhfpfile_not_exists_locally_error(self):
+        """Knows that raw file of given base name does not exist locally."""
+        rhf = RawHfpFile(base_name='2020-01-01T01', event_type=EventType.ARR)
+        self.assertFalse(rhf.local_exists())
 
     def test_rawhfpdump_creation(self):
         """Can create a simple RawHfpDump."""

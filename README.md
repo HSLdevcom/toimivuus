@@ -8,6 +8,16 @@ HSL planners and member municipalities can use them to improve the performance o
 **TODO**.
 These instructions wait for the MVP implementation.
 
+### Environment variables
+
+| Variable             | Description                                                                                                            |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| POSTGRES_{}          | See [Postgres image](https://registry.hub.docker.com/_/postgres/) readme.                                              |
+| HASURA_{}            | See [Hasura documentation](https://hasura.io/docs/latest/graphql/core/deployment/graphql-engine-flags/reference.html). |
+| DATA_CACHE_DIRECTORY | Directory for caching downloaded and intermediate data files. Prefer an absolute directory.                            |
+| STORAGE_URL_ROOT     | Root URL of remote storage and container where HFP `.zst` files are located.                                           |
+|                      |                                                                                                                        |
+
 ## Development
 
 Start by cloning this repo to your local machine.
