@@ -54,7 +54,7 @@ class RawHfpFile:
     def local_exists(self) -> bool:
         return os.path.exists(self.local_path)
 
-    def download(self) -> None:
+    def download_remote(self) -> None:
         if not self.remote_exists():
             log.warning(f'Remote file missing: cannot download {self.raw_file_name}')
             return
