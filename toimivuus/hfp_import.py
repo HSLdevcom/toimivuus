@@ -21,8 +21,11 @@ def main(datehours: List[str],
     for dh in datehours:
         rhd = toimivuus.RawHfpDump(dump_date_hour = dh,
                                    event_types = events)
-        for rhf in rhd.raw_hfp_files:
-            print(f'{rhf.raw_file_name} {rhf.remote_exists()}')
+        rhd.make_filtered_dataframes(routes = routes,
+                                     columns = ['tsi', 'ownerOperatorId', 'veh',
+                                                'route', 'dir', 'oday', 'start',
+                                                'oper', 'eventType', 'odo', 'drst',
+                                                'stop', 'longitude', 'latitude'])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Import raw HFP data.')
