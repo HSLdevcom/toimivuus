@@ -2,14 +2,10 @@ import logging as log
 import os
 import requests
 import urllib.parse
+from azure.storage.blob import ContainerClient
 from enum import Enum, auto
 from datetime import datetime
 from typing import List
-
-def remote_file_path(fname: str) -> str:
-    """Append fname to STORAGE_URL_ROOT."""
-    url = os.getenv('STORAGE_URL_ROOT')
-    return urllib.parse.urljoin(url, fname)
 
 def cached_file_path(fname: str) -> str:
     """Append fname to DATA_CACHE_DIRECTORY."""
@@ -39,21 +35,21 @@ class EventType(Enum):
     VJOUT = auto()
 
 class RawHfpFile:
-    """Points to a file of raw HFP messages of single type received an hour."""
+    """Points to a file of raw HFP messages of single type received an hour.
+    To operate with remote raw data file, container_client must be provided."""
 
     REQUEST_TIMEOUT_S=2
 
-    def __init__(self, base_name: str, event_type: EventType):
+    def __init__(self, base_name: str, event_type: EventType, container_client: ContainerClient=None):
         self.raw_file_name = f'{base_name}_{event_type.name}.csv.zst'
-        self.remote_path = remote_file_path(self.raw_file_name)
         self.local_path = cached_file_path(self.raw_file_name)
+        if container_client is not None:
+            self.blob_client = container_client.get_blob_client(self.raw_file_name)
+        else:
+            self.blob_client = None
     
     def remote_exists(self) -> bool:
-        try:
-            r = requests.head(self.remote_path, timeout=self.REQUEST_TIMEOUT_S)
-            return r.status_code == 200
-        except requests.exceptions.ConnectionError:
-            return False
+        return self.blob_client is not None and self.blob_client.exists()
 
     def local_exists(self) -> bool:
         return os.path.exists(self.local_path)
@@ -62,15 +58,9 @@ class RawHfpFile:
         if not self.remote_exists():
             log.warning(f'Remote file missing: cannot download {self.raw_file_name}')
             return
-        with requests.get(self.remote_path, stream=True) as r:
-            r.raise_for_status()
-            with open(self.local_path, 'wb') as f:
-                i = 0
-                for chunk in r.iter_content(chunk_size=8192):
-                    i += 1
-                    log.debug(f'Chunk {i} ...')
-                    f.write(chunk)
-                log.info(f'{self.local_path} downloaded')
+        with open(self.local_path, 'wb') as f:
+            f.write(self.blob_client.download_blob().readall())
+            log.info(f'{self.local_path} downloaded')
 
 class RawHfpDump:
     """Collection of raw HFP messages of multiple types received during given hour."""

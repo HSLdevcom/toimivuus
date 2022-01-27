@@ -10,13 +10,12 @@ These instructions wait for the MVP implementation.
 
 ### Environment variables
 
-| Variable             | Description                                                                                                            |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| POSTGRES_{}          | See [Postgres image](https://registry.hub.docker.com/_/postgres/) readme.                                              |
-| HASURA_{}            | See [Hasura documentation](https://hasura.io/docs/latest/graphql/core/deployment/graphql-engine-flags/reference.html). |
-| DATA_CACHE_DIRECTORY | Directory for caching downloaded and intermediate data files. Prefer an absolute directory.                            |
-| STORAGE_URL_ROOT     | Root URL of remote storage and container where HFP `.zst` files are located.                                           |
-|                      |                                                                                                                        |
+| Variable                               | Description                                                                                                            |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| POSTGRES_{}                            | See [Postgres image](https://registry.hub.docker.com/_/postgres/) readme.                                              |
+| HASURA_{}                              | See [Hasura documentation](https://hasura.io/docs/latest/graphql/core/deployment/graphql-engine-flags/reference.html). |
+| HFP_STORAGE_CONNECTION_STRING          | Connection string of blob storage account containing raw HFP data files.                                               |
+| HFP_STORAGE_CONTAINER_NAME=hfp-v2-test | Name of the blob container where HFP `.zst` files are located.                                                         |
 
 ## Development
 
