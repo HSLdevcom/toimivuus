@@ -62,6 +62,13 @@ class RawHfpFile:
             f.write(self.blob_client.download_blob().readall())
             log.info(f'{self.local_path} downloaded')
 
+    def delete_local(self) -> None:
+        if not self.local_exists():
+            log.info(f'{self.local_path} missing, cannot delete')
+            return
+        os.remove(self.local_path)
+        log.info(f'{self.local_path} deleted')
+
 class RawHfpDump:
     """Collection of raw HFP messages of multiple types received during given hour."""
     
