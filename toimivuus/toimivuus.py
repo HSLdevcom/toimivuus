@@ -1,8 +1,6 @@
 import logging as log
 import os
-import requests
-import urllib.parse
-from azure.storage.blob import ContainerClient
+from azure.storage.blob import BlobServiceClient, ContainerClient
 from enum import Enum, auto
 from datetime import datetime
 from typing import List
@@ -47,6 +45,7 @@ class RawHfpFile:
             self.blob_client = container_client.get_blob_client(self.raw_file_name)
         else:
             self.blob_client = None
+        self.data = None
     
     def remote_exists(self) -> bool:
         return self.blob_client is not None and self.blob_client.exists()
@@ -72,7 +71,29 @@ class RawHfpFile:
 class RawHfpDump:
     """Collection of raw HFP messages of multiple types received during given hour."""
     
-    def __init__(self, dump_datetime: datetime, event_types: List[str]):
-        self.dump_datetime = dump_datetime
-        self.event_types = [EventType[evt] for evt in event_types]
-        self.base_name = f'{dump_datetime.year}-{dump_datetime.month:02d}-{dump_datetime.day:02d}T{dump_datetime.hour:02d}'
+    def __init__(self, 
+                 dump_date_hour: str, 
+                 event_types: List[str], ):
+        dump_datetime: datetime = datetime.strptime(dump_date_hour,
+                                                    '%Y-%m-%dT%H')
+        self.event_types: List[EventType] = [EventType[evt] for evt in event_types]
+        self.base_name: str = f'{dump_datetime.year}-{dump_datetime.month:02d}-{dump_datetime.day:02d}T{dump_datetime.hour:02d}'
+        container_client = BlobServiceClient.from_connection_string(os.getenv('HFP_STORAGE_CONNECTION_STRING')).get_container_client(os.getenv('HFP_STORAGE_CONTAINER_NAME'))
+        self.raw_hfp_files: List[RawHfpFile] = [RawHfpFile(base_name=self.base_name, event_type=evt, container_client=container_client) for evt in self.event_types]
+        
+    def download_raw_files(self) -> None:
+        """Download compressed csv files by event types to cache."""
+        for rhf in self.raw_hfp_files:
+            rhf.download_remote()
+    
+    def create_merged_file(self, columns: List[str], routes: List[str]) -> None:
+        """Merge csv files by event type into one file that contains
+        the specified columns and rows with specified routes only."""
+        pass
+    
+    def delete_raw_files(self) -> None:
+        """Delete compressed csv files by event types from cache."""
+        for rhf in self.raw_hfp_files:
+            rhf.delete_local()
+    
+    
