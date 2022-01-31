@@ -1,3 +1,4 @@
+from abc import abstractmethod
 import io
 import logging as log
 import os
@@ -174,3 +175,49 @@ class RawHfpDump:
         for rhf in self.raw_hfp_files:
             rhf.delete_local()
     
+class CompactHfpDump:
+    """Collection of HFP messages combined by vehicle and integer timestamp."""
+    
+    def __init__(self, rawdata: pandas.DataFrame) -> None:
+        """Create CompactHfpDump from DataFrame of with raw HFP messages."""
+        pass
+        
+        # TODO: Validate rawdata structure: expected columns and their data types.
+        #       Use abstractmethod, do not keep potentially large raw data table
+        #       with this object.
+        # TODO: Merge rows by (tsi, ownerOperatorId, veh).
+        # TODO: Import rows to db.
+        
+    @abstractmethod
+    def validate_rawdata_structure(rawdata: pandas.DataFrame) -> pandas.DataFrame:
+        pass
+        
+        # TODO: Must have cols
+        #       tsi,ownerOperatorId,veh,route,dir,oday,start,oper,eventType,odo,drst,stop,longitude,latitude
+        #       with correct types, 
+        #       otherwise raise an exception.
+    
+    @abstractmethod
+    def combine_rawdata_rows(rawdata: pandas.DataFrame) -> pandas.DataFrame:
+        pass
+    
+        # TODO: Merge rows by (tsi, ownerOperatorId, veh):
+        #       - Order rows by EventType collation -> VP first.
+        #       - Collect event types except VP into array.
+        #       - Use first non-empty value for other fields.
+        #         (Later, we can change this to pick first "sensible" value if needed.)
+        #       - Add placeholder column for valid/invalid flag.
+        
+    def validate(self) -> None:
+        pass
+    
+        # TODO: Validate DataFrame contents, e.g. for missing coordinates.
+        #       Mark valid records, and store messages about invalid records
+        #       to separate table that can be reported.
+        
+    def import_to_db(self, conn) -> None:
+        pass
+    
+        # TODO: Using conn to PostgreSQL db,
+        #       import _valid_ records there.
+        #       Call import procedure somehow, instead of direct copy_from?
