@@ -54,9 +54,6 @@ class RawHfpFile:
         self.raw_file_name = f'{base_name}_{event_type.name}.csv.zst'
         self.local_path = cached_file_path(self.raw_file_name)
         self.dataframe: pandas.DataFrame = None
-    
-    def remote_exists(self) -> bool:
-        return self.blob_client is not None and self.blob_client.exists()
 
     def local_exists(self) -> bool:
         """Does the target file exist in local cache?"""
