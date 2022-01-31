@@ -41,31 +41,49 @@ class TestAll(unittest.TestCase):
         rhf = RawHfpFile(base_name='2020-01-01T01', event_type=EventType.ARR)
         self.assertFalse(rhf.local_exists())
 
+    @mock.patch.dict(os.environ, {'DATA_CACHE_DIRECTORY': 'tmp'})
     def test_rawhfpdump_creation(self):
         """Can create a simple RawHfpDump."""
         self.assertIsInstance(
             RawHfpDump(
-                dump_datetime = datetime(2020, 1, 2, 3),
+                first_datehour = '2020-01-02T03',
+                last_datehour = '2020-01-02T06',
+                event_types = ['VP', 'DOO', 'DOC']
+            ),
+            RawHfpDump
+        )
+        
+    @mock.patch.dict(os.environ, {'DATA_CACHE_DIRECTORY': 'tmp'})
+    def test_rawhfpdump_creation_without_last_datehour(self):
+        """Can create a simple RawHfpDump."""
+        self.assertIsInstance(
+            RawHfpDump(
+                first_datehour = '2020-01-02T03',
+                last_datehour = None,
                 event_types = ['VP', 'DOO', 'DOC']
             ),
             RawHfpDump
         )
 
+    @mock.patch.dict(os.environ, {'DATA_CACHE_DIRECTORY': 'tmp'})
     def test_rawhfpdump_base_name(self):
         """RawHfpDump has the desired base name."""
         self.assertEqual(
             RawHfpDump(
-                dump_datetime = datetime(2020, 1, 2, 3),
+                first_datehour = '2020-01-02T03',
+                last_datehour = '2020-01-02T06',
                 event_types = ['VP', 'DOO', 'DOC']
             ).base_name,
-            '2020-01-02T03'
+            '2020-01-02T03_2020-01-02T06'
         )
 
+    @mock.patch.dict(os.environ, {'DATA_CACHE_DIRECTORY': 'tmp'})
     def test_rawhfpdump_datetime_error(self):
-        """Non-datetime argument throws an error."""
-        with self.assertRaises(AttributeError):
+        """Poorly formatted datetime throws an error."""
+        with self.assertRaises(ValueError):
             RawHfpDump(
-                dump_datetime = '2020010203',
+                first_datehour = '2020010203',
+                last_datehour = '2020-01-02T06',
                 event_types = ['VP', 'DOO', 'DOC']
             )
 

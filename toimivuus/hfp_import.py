@@ -6,33 +6,41 @@ import toimivuus
 from typing import List
 
 
-def main(datehours: List[str],
+def main(first_datehour: str,
+         last_datehour: str,
          events: List[str],
          routes: List[str],
          loglvl: str):
-    
+
     logging.basicConfig(level=getattr(logging, loglvl))
-    logging.info(datehours)
+    logging.info(first_datehour)
+    logging.info(last_datehour)
     logging.info(events)
     logging.info(routes)
     logging.info(os.getenv('HFP_STORAGE_CONNECTION_STRING'))
     logging.info(os.getenv('HFP_STORAGE_CONTAINER_NAME'))
-    
-    for dh in datehours:
-        rhd = toimivuus.RawHfpDump(dump_date_hour = dh,
-                                   event_types = events)
-        rhd.make_filtered_dataframes(routes = routes,
-                                     columns = ['tsi', 'ownerOperatorId', 'veh',
-                                                'route', 'dir', 'oday', 'start',
-                                                'oper', 'eventType', 'odo', 'drst',
-                                                'stop', 'longitude', 'latitude'])
+
+    rhd = toimivuus.RawHfpDump(first_datehour=first_datehour,
+                               last_datehour=last_datehour,
+                               event_types=events)
+    rhd.download_raw_files()
+    rhd.make_filtered_dataframes(routes=routes,
+                                 columns=['tsi', 'ownerOperatorId', 'veh',
+                                          'route', 'dir', 'oday', 'start',
+                                          'oper', 'eventType', 'odo', 'drst',
+                                          'stop', 'longitude', 'latitude'])
+    rhd.create_merged_dataframe()
+    print(rhd.dataframe.shape)
+    rhd.write_to_csv()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Import raw HFP data.')
-    parser.add_argument('--datehours',
-                        help='Date-hour strings to import data from, e.g. 2020-12-01T06 2020-12-01T07.',
-                        nargs='+',
+    parser.add_argument('--first_datehour',
+                        help='First date-hour to import data from, e.g. 2020-12-01T06.',
                         required=True)
+    parser.add_argument('--last_datehour',
+                        help='Last date-hour to import data from, e.g. 2020-12-01T12. If omitted, only first-datehour is imported.')
     parser.add_argument('--events',
                         help='HFP event types to import, e.g. DOO DOC ARR.',
                         nargs='+',
@@ -46,5 +54,6 @@ if __name__ == '__main__':
                         default='WARNING',
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'])
     args = parser.parse_args()
-    
-    main(args.datehours, args.events, args.routes, args.loglvl)
+
+    main(args.first_datehour, args.last_datehour,
+         args.events, args.routes, args.loglvl)

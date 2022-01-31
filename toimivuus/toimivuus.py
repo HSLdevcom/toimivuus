@@ -1,17 +1,26 @@
 import io
 import logging as log
 import os
+from datetime import datetime, timedelta
+from enum import Enum, auto
+from typing import List
+
 import pandas
 import zstandard
 from azure.storage.blob import BlobServiceClient, ContainerClient
-from enum import Enum, auto
-from datetime import datetime
-from typing import List
+
 
 def cached_file_path(fname: str) -> str:
     """Append fname to DATA_CACHE_DIRECTORY."""
     cache = os.getenv('DATA_CACHE_DIRECTORY')
     return os.path.join(cache, fname)
+
+def datehour_range(start: datetime, end: datetime):
+        """Generate dates and hours between (inclusive) start and end."""
+        current_datehour: datetime = start
+        while current_datehour <= end:
+            yield current_datehour
+            current_datehour += timedelta(hours=1)
 
 class EventType(Enum):
     """HFP event type labels,
@@ -41,13 +50,9 @@ class RawHfpFile:
 
     REQUEST_TIMEOUT_S=2
 
-    def __init__(self, base_name: str, event_type: EventType, container_client: ContainerClient=None):
+    def __init__(self, base_name: str, event_type: EventType):
         self.raw_file_name = f'{base_name}_{event_type.name}.csv.zst'
         self.local_path = cached_file_path(self.raw_file_name)
-        if container_client is not None:
-            self.blob_client = container_client.get_blob_client(self.raw_file_name)
-        else:
-            self.blob_client = None
         self.dataframe: pandas.DataFrame = None
     
     def remote_exists(self) -> bool:
@@ -56,15 +61,16 @@ class RawHfpFile:
     def local_exists(self) -> bool:
         return os.path.exists(self.local_path)
 
-    def download_remote(self) -> None:
-        if not self.remote_exists():
-            log.warning(f'Remote file missing: cannot download {self.raw_file_name}')
-            return
+    def download_remote(self, container_client: ContainerClient) -> None:
         if self.local_exists():
             log.info(f'{self.raw_file_name} already exists, skipping download')
             return
+        blob_client = container_client.get_blob_client(self.raw_file_name)
+        if not blob_client.exists():
+            log.warning(f'Remote file missing: cannot download {self.raw_file_name}')
+            return
         with open(self.local_path, 'wb') as f:
-            f.write(self.blob_client.download_blob().readall())
+            f.write(blob_client.download_blob().readall())
             log.info(f'{self.local_path} downloaded')
 
     def read_dataframe(self) -> None:
@@ -102,19 +108,47 @@ class RawHfpDump:
     """Collection of raw HFP messages of multiple types received during given hour."""
     
     def __init__(self, 
-                 dump_date_hour: str, 
+                 first_datehour: str,
+                 last_datehour: str,
                  event_types: List[str]):
-        dump_datetime: datetime = datetime.strptime(dump_date_hour,
-                                                    '%Y-%m-%dT%H')
+        self.first_datehour: datetime = datetime.strptime(first_datehour, '%Y-%m-%dT%H')
+        # Upper limit not required, we can fetch one hour only as well.
+        if last_datehour is None:
+            self.last_datehour = self.first_datehour
+        else:
+            self.last_datehour: datetime = datetime.strptime(last_datehour, '%Y-%m-%dT%H')
+        self.base_name: str = '{0}_{1}'.format(
+            self.first_datehour.strftime('%Y-%m-%dT%H'),
+            self.last_datehour.strftime('%Y-%m-%dT%H')
+        )
+        
         self.event_types: List[EventType] = [EventType[evt] for evt in event_types]
-        self.base_name: str = f'{dump_datetime.year}-{dump_datetime.month:02d}-{dump_datetime.day:02d}T{dump_datetime.hour:02d}'
-        container_client = BlobServiceClient.from_connection_string(os.getenv('HFP_STORAGE_CONNECTION_STRING')).get_container_client(os.getenv('HFP_STORAGE_CONTAINER_NAME'))
-        self.raw_hfp_files: List[RawHfpFile] = [RawHfpFile(base_name=self.base_name, event_type=evt, container_client=container_client) for evt in self.event_types]
+        
+        self.raw_hfp_files: List[RawHfpFile] = []
+        for datehour in datehour_range(self.first_datehour, self.last_datehour):
+            for event_type in self.event_types:
+                self.raw_hfp_files.append(
+                    RawHfpFile(base_name=datehour.strftime('%Y-%m-%dT%H'), 
+                               event_type=event_type)
+                )
+                
+        self.container_client: ContainerClient = None
+        self.dataframe: pandas.DataFrame = None
+        
+    def connect_to_container(self) -> None:
+        """Connect to remote container."""
+        self.container_client = BlobServiceClient.from_connection_string(
+            os.getenv('HFP_STORAGE_CONNECTION_STRING')
+        ).get_container_client(
+                os.getenv('HFP_STORAGE_CONTAINER_NAME')
+            )
         
     def download_raw_files(self) -> None:
         """Download compressed csv files by event types to cache."""
+        if self.container_client is None:
+            self.connect_to_container()
         for rhf in self.raw_hfp_files:
-            rhf.download_remote()
+            rhf.download_remote(container_client=self.container_client)
             
     def make_filtered_dataframes(self, routes: List[str], columns: List[str]) -> None:
         """Read raw data files and filter with columns and routes."""
@@ -122,14 +156,22 @@ class RawHfpDump:
             rhf.read_dataframe()
             rhf.filter_dataframe(routes=routes, columns=columns)
     
-    def create_merged_file(self) -> None:
-        """Merge csv files by event type into one file that contains
-        the specified columns and rows with specified routes only."""
-        pass
+    def create_merged_dataframe(self) -> None:
+        """Merge dataframes into one, sorted by tsi."""
+        self.dataframe = pandas.concat(
+            [rhf.dataframe for rhf in self.raw_hfp_files if rhf.dataframe is not None]
+        )
+        
+    def write_to_csv(self) -> None:
+        """Write merged dataframe to .csv in cache."""
+        if self.dataframe is None:
+            log.warning(f'{self.base_name}: dataframe missing, cannot write')
+            return
+        self.dataframe.to_csv(cached_file_path(f'{self.base_name}.csv'),
+                              index=False)
     
     def delete_raw_files(self) -> None:
         """Delete compressed csv files by event types from cache."""
         for rhf in self.raw_hfp_files:
             rhf.delete_local()
-    
     
