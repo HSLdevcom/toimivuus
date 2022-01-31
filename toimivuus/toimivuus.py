@@ -16,11 +16,11 @@ def cached_file_path(fname: str) -> str:
     return os.path.join(cache, fname)
 
 def datehour_range(start: datetime, end: datetime):
-        """Generate dates and hours between (inclusive) start and end."""
-        current_datehour: datetime = start
-        while current_datehour <= end:
-            yield current_datehour
-            current_datehour += timedelta(hours=1)
+    """Generate dates and hours between (inclusive) start and end."""
+    current_datehour: datetime = start
+    while current_datehour <= end:
+        yield current_datehour
+        current_datehour += timedelta(hours=1)
 
 class EventType(Enum):
     """HFP event type labels,
@@ -59,9 +59,11 @@ class RawHfpFile:
         return self.blob_client is not None and self.blob_client.exists()
 
     def local_exists(self) -> bool:
+        """Does the target file exist in local cache?"""
         return os.path.exists(self.local_path)
 
     def download_remote(self, container_client: ContainerClient) -> None:
+        """Download target blob in remote container to local cache."""
         if self.local_exists():
             log.info(f'{self.raw_file_name} already exists, skipping download')
             return
@@ -105,7 +107,7 @@ class RawHfpFile:
         log.info(f'{self.local_path} deleted')
 
 class RawHfpDump:
-    """Collection of raw HFP messages of multiple types received during given hour."""
+    """Collection of raw HFP messages of multiple types received during given range of hours."""
     
     def __init__(self, 
                  first_datehour: str,
